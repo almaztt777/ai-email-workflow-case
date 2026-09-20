@@ -1,36 +1,57 @@
-# Error analysis
+# Разбор ошибок
 
-## Baseline V1
+## Первая версия V1
 
-Metrics: {"name":90,"phone":100,"topic":93,"urgency":78,"full":65}
+Результат:
 
-Observed failure classes:
-- urgency keyword matching ignored negation such as "не срочно" / "срочности нет";
-- relative deadlines such as "до понедельника" were not resolved against the email date;
-- greeting/signature formats caused name extraction failures;
-- subject-only topic extraction lost important detail found only in the email body.
+- имя — 90%;
+- телефон — 100%;
+- тема — 93%;
+- срочность — 78%;
+- вся строка полностью верна — 65%.
 
-V1 had 14 rows with at least one mismatch out of 40.
+В 14 письмах из 40 хотя бы одно поле было неправильным.
 
-## V2
+Основные причины:
 
-V2 changed only rules justified by V1 failures:
-- negative urgency phrases are evaluated before high-urgency keywords;
-- relative deadlines are handled;
-- more greeting/signature patterns are supported;
-- topic extraction prefers the current message body and falls back to subject;
-- phone selection prefers personal/primary/contact context.
+- программа видела слово «срочно», но не всегда понимала отрицание «не срочно»;
+- плохо обрабатывались сроки вроде «до понедельника»;
+- некоторые варианты имени в приветствии или подписи не находились;
+- если важная тема была только внутри письма, одной темы письма было недостаточно.
 
-V2 train metrics: {"name":98,"phone":100,"topic":98,"urgency":100,"full":95}
+## Что поменял в V2
 
-## Holdout (emails 41-50)
+После первого прогона я исправил именно найденные проблемы:
 
-The holdout was not used to tune V2.
+- сначала проверяется «не срочно», и только потом слово «срочно»;
+- добавлена обработка относительных сроков;
+- добавлены дополнительные варианты записи имени;
+- тема берется из текста письма, а тема письма используется как запасной вариант;
+- если в письме несколько телефонов, выше приоритет у номера рядом со словами «мой», «основной», «контактный», «WhatsApp».
 
-Holdout metrics: {"name":90,"phone":100,"topic":100,"urgency":90,"full":80}
+Результат V2 на тех же 40 письмах:
 
-Remaining holdout failures:
-- 45: {"name":false,"phone":true,"topic":true,"urgency":true} — output: {"id":"45","name":null,"phone":"+77000004545","topic":"тренажёр венепункции","urgency":"HIGH","urgency_reason":"Improved after V1 error analysis"}; expected: {"name":"Сабина","phone":"+77000004545","topic":"тренажёр венепункции","urgency":"HIGH"}
-- 46: {"name":true,"phone":true,"topic":true,"urgency":false} — output: {"id":"46","name":"Арсен","phone":"+77000004646","topic":"симулятор пациента","urgency":"HIGH","urgency_reason":"Improved after V1 error analysis"}; expected: {"name":"Арсен","phone":"+77000004646","topic":"симулятор пациента","urgency":"LOW"}
+- имя — 98%;
+- телефон — 100%;
+- тема — 98%;
+- срочность — 100%;
+- вся строка полностью верна — 95%.
 
-These remaining failures are intentionally left visible rather than tuning against the holdout.
+## Отдельные 10 контрольных писем
+
+Эти письма я не использовал, когда исправлял V2.
+
+Результат:
+
+- имя — 90%;
+- телефон — 100%;
+- тема — 100%;
+- срочность — 90%;
+- вся строка полностью верна — 80%.
+
+Осталось две ошибки:
+
+- письмо 45 — не определилось имя Сабина;
+- письмо 46 — неправильно определилась срочность: в старом контексте было слово «срочно», хотя текущий срок уже перенесли.
+
+Эти ошибки я специально не стал исправлять после контрольного прогона, чтобы результат отдельной проверки остался честным.
