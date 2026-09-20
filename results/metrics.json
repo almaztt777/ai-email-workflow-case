@@ -1,0 +1,23 @@
+{
+  "v1_train": {
+    "name": 90,
+    "phone": 100,
+    "topic": 93,
+    "urgency": 78,
+    "full": 65
+  },
+  "v2_train": {
+    "name": 98,
+    "phone": 100,
+    "topic": 98,
+    "urgency": 100,
+    "full": 95
+  },
+  "v2_holdout": {
+    "name": 90,
+    "phone": 100,
+    "topic": 100,
+    "urgency": 90,
+    "full": 80
+  }
+}
