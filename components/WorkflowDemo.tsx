@@ -54,7 +54,13 @@ export default function WorkflowDemo() {
     const split = mode === "holdout" ? "holdout" : "train";
     const selected = (emails as EmailCase[]).filter((e) => e.split === split);
     setRows(selected.map(parser));
-    setLabel(mode === "v1" ? "V1 on 40 development emails" : mode === "v2" ? "V2 on 40 development emails" : "V2 on untouched 10-email holdout");
+    setLabel(
+      mode === "v1"
+        ? "V1: 40 основных писем"
+        : mode === "v2"
+          ? "V2: те же 40 писем после исправлений"
+          : "V2: отдельные 10 контрольных писем"
+    );
   }
 
   function downloadCsv() {
@@ -77,20 +83,20 @@ export default function WorkflowDemo() {
   return (
     <div style={{ display: "grid", gap: 18 }}>
       <section style={card}>
-        <h2 style={{ marginTop: 0 }}>1. Dataset</h2>
-        <p>40 development/evaluation emails + 10 untouched holdout emails. All data is synthetic.</p>
+        <h2 style={{ marginTop: 0 }}>1. Тестовые письма</h2>
+        <p>40 основных писем + 10 отдельных контрольных. Все письма вымышленные.</p>
         <p style={{ color: "#6b7280" }}>
-          Ground truth was frozen before V1. The holdout was not used to tune V2.
+          Правильные ответы зафиксированы заранее. Последние 10 писем не использовались при исправлении V2.
         </p>
       </section>
 
       <section style={card}>
-        <h2 style={{ marginTop: 0 }}>2. Run the workflow</h2>
+        <h2 style={{ marginTop: 0 }}>2. Запустить</h2>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <button onClick={() => run("v1")} style={{ padding: "10px 16px", cursor: "pointer" }}>Run V1 — 40 emails</button>
-          <button onClick={() => run("v2")} style={{ padding: "10px 16px", cursor: "pointer" }}>Run V2 — 40 emails</button>
-          <button onClick={() => run("holdout")} style={{ padding: "10px 16px", cursor: "pointer" }}>Run holdout — 10 emails</button>
-          {rows.length > 0 && <button onClick={downloadCsv} style={{ padding: "10px 16px", cursor: "pointer" }}>Download CSV</button>}
+          <button onClick={() => run("v1")} style={{ padding: "10px 16px", cursor: "pointer" }}>Запустить V1 — 40 писем</button>
+          <button onClick={() => run("v2")} style={{ padding: "10px 16px", cursor: "pointer" }}>Запустить V2 — 40 писем</button>
+          <button onClick={() => run("holdout")} style={{ padding: "10px 16px", cursor: "pointer" }}>Проверить отдельные 10 писем</button>
+          {rows.length > 0 && <button onClick={downloadCsv} style={{ padding: "10px 16px", cursor: "pointer" }}>Скачать CSV</button>}
         </div>
         {label && <p style={{ color: "#4b5563", marginBottom: 0 }}>{label}</p>}
       </section>
@@ -98,14 +104,14 @@ export default function WorkflowDemo() {
       {rows.length > 0 && (
         <>
           <section style={card}>
-            <h2 style={{ marginTop: 0 }}>3. Measured accuracy</h2>
+            <h2 style={{ marginTop: 0 }}>3. Точность</h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 12 }}>
               {[
-                ["Name", metrics.name],
-                ["Phone", metrics.phone],
-                ["Topic", metrics.topic],
-                ["Urgency", metrics.urgency],
-                ["Full row", metrics.full],
+                ["Имя", metrics.name],
+                ["Телефон", metrics.phone],
+                ["Тема", metrics.topic],
+                ["Срочность", metrics.urgency],
+                ["Вся строка", metrics.full],
               ].map(([metric, value]) => (
                 <div key={String(metric)} style={{ background: "#f9fafb", padding: 16, borderRadius: 10 }}>
                   <div style={{ color: "#6b7280", fontSize: 13 }}>{metric}</div>
@@ -116,11 +122,11 @@ export default function WorkflowDemo() {
           </section>
 
           <section style={{ ...card, overflowX: "auto" }}>
-            <h2 style={{ marginTop: 0 }}>4. Output table</h2>
+            <h2 style={{ marginTop: 0 }}>4. Результат</h2>
             <table style={{ borderCollapse: "collapse", width: "100%", fontSize: 14 }}>
               <thead>
                 <tr>
-                  {["ID", "Name", "Phone", "Topic", "Urgency", "Reason"].map((h) => (
+                  {["ID", "Имя", "Телефон", "Тема", "Срочность", "Причина"].map((h) => (
                     <th key={h} style={{ textAlign: "left", borderBottom: "1px solid #d1d5db", padding: 8 }}>{h}</th>
                   ))}
                 </tr>
