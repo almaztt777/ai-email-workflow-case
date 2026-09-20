@@ -1,135 +1,115 @@
-# AI Email Workflow Case
+# Автоматизация разбора писем
 
-Technical case for an **AI Workflow Automation Engineer**.
+Технический кейс на позицию **AI Workflow Automation Engineer**.
 
-## Result in one minute
+## Что я сделал
 
-The workflow converts semi-structured customer emails into four required fields:
+Собрал простую автоматизацию, которая берет текст письма и превращает его в строку таблицы:
 
-**name · phone · topic · urgency**
+- имя;
+- телефон;
+- тема обращения;
+- срочность.
 
-Measured on synthetic but realistic email data:
+Чтобы не публиковать реальные рабочие письма, я использовал 50 вымышленных, но похожих на реальные запросы.
 
-| Metric | V1 (40) | V2 (40) | Holdout V2 (10) |
+40 писем использовал для разработки и проверки. Еще 10 оставил отдельно и не смотрел на них при исправлении второй версии.
+
+## Результат
+
+| Что проверял | V1, 40 писем | V2, 40 писем | Контрольные 10 писем |
 |---|---:|---:|---:|
-| Name accuracy | 90% | 98% | 90% |
-| Phone accuracy | 100% | 100% | 100% |
-| Topic accuracy | 93% | 98% | 100% |
-| Urgency accuracy | 78% | 100% | 90% |
-| **Full-row accuracy** | **65%** | **95%** | **80%** |
+| Имя | 90% | 98% | 90% |
+| Телефон | 100% | 100% | 100% |
+| Тема | 93% | 98% | 100% |
+| Срочность | 78% | 100% | 90% |
+| **Вся строка полностью верна** | **65%** | **95%** | **80%** |
 
-The holdout set was not used to tune V2.
+В первой версии было 14 писем, где хотя бы одно поле определилось неправильно. После исправлений во второй версии таких писем осталось 2 из 40.
 
-## What this demonstrates
+На отдельных 10 письмах, которые я не использовал при исправлении V2, полностью правильно обработалось 80%.
 
-`dataset → frozen ground truth → V1 → real failures → targeted fixes → V2 → untouched holdout`
+## Где ошибалась первая версия
 
-The main observed V1 failures were:
-- urgency keywords ignoring negation such as “не срочно”;
-- relative deadlines;
-- names in greetings/signatures;
-- important topic details present in the body but not in the subject.
+Основные ошибки были такие:
 
-All remaining holdout failures are left visible rather than tuned away.
+- слово «срочно» срабатывало даже в фразах вроде «не срочно»;
+- не всегда правильно понимались сроки вроде «до понедельника»;
+- имя иногда стояло в подписи или было написано нестандартно;
+- тема письма не всегда полностью отражала то, что было написано внутри письма.
 
-## Stack
+После первого прогона я исправил именно эти места и снова прогнал те же 40 писем.
 
-- **Next.js + TypeScript**
-- **Vercel**
-- **GitHub**
-- deterministic V1/V2 parsers for reproducible measured evaluation
-- optional **Vercel AI Gateway / OpenAI-compatible endpoint** for AI extraction experiments
+Подробно: `results/error-analysis.md`.
 
-For this case I deliberately kept deterministic fields deterministic and used AI as a development/analysis assistant instead of paying for an LLM call where rules were sufficient.
-
-## Dataset and privacy
-
-- 40 development/evaluation emails
-- 10 untouched holdout emails
-- all names, phone numbers and requests are fictional
-- no real customer correspondence is published
-
-Files:
-- `data/emails.json`
-- `data/ground-truth.json`
-
-## Reproduce evaluation
+## Как запустить
 
 ```bash
 npm install
 npm run evaluate
 ```
 
-Parsers:
-- `scripts/parser-v1.mjs`
-- `scripts/parser-v2.mjs`
+Основные файлы:
 
-Measured outputs:
-- `results/v1-results.csv`
-- `results/v2-results.csv`
-- `results/holdout-results.csv`
-- `results/metrics.json`
-- `results/error-analysis.md`
+- `scripts/parser-v1.mjs` — первая версия;
+- `scripts/parser-v2.mjs` — исправленная версия;
+- `data/emails.json` — 50 тестовых писем;
+- `data/ground-truth.json` — правильные ответы для проверки;
+- `results/` — результаты прогонов.
 
-## Urgency rubric
+## Как определяю срочность
 
-- **HIGH** — today / tomorrow / <=24h / explicitly urgent in the current request
-- **MEDIUM** — approximately 2–7 days
-- **LOW** — more than 7 days, no deadline, or explicitly not urgent
+- **HIGH** — нужно сегодня, завтра, в течение суток или явно написано «срочно»;
+- **MEDIUM** — срок примерно 2–7 дней;
+- **LOW** — срок больше недели, срока нет или прямо написано «не срочно».
 
-## Cost and time
+## Стоимость и экономия времени
 
-Measured deterministic parser cost: **$0 per email**.
+Текущие V1 и V2 работают обычным кодом и не вызывают платный AI API. Поэтому дополнительная стоимость самого разбора сейчас — **$0 на письмо**.
 
-For time savings I use a transparent planning assumption of ~60 seconds manual handling per short email. That gives roughly **95–100 minutes saved per 100 emails** after allowing a few minutes for automated ingestion/export.
+Это не означает, что любая будущая промышленная версия будет полностью бесплатной. Если добавить AI API для сложных случаев, стоимость нужно считать по фактическому числу токенов.
 
-I did not invent an AI-token cost because the measured V1/V2 runs did not require model calls. The optional AI endpoint returns usage data so real cost can be logged when enabled.
+По времени я использовал простое допущение: вручную на одно короткое письмо уходит около 1 минуты — прочитать и занести 4 поля. Значит 100 писем — около 100 минут ручной работы. Автоматический разбор занимает секунды, поэтому экономия получается примерно 95–100 минут на 100 писем.
 
-Full analysis: `docs/COST_TIME_SCALE.md`.
+Это оценка, а не точный замер секундомером.
 
-## What changes at 10,000 emails/day
+Подробнее: `docs/COST_TIME_SCALE.md`.
 
-First production change:
+## Что будет при 10 000 писем в день
 
-`email ingestion → durable queue → idempotent workers → validation → database → reporting`
+Я **не запускал 10 000 писем и не делал нагрузочный тест**. Этот пункт задания — мой разбор того, что придется менять при таком объеме.
 
-Add:
-- provider message ID as idempotency key;
-- retries + dead-letter queue;
-- database instead of spreadsheet as the system of record;
-- rate-limit handling;
-- throughput/latency/error/cost monitoring;
-- deterministic extraction for easy fields and AI only for ambiguous cases.
+Первое, что я бы сделал: отделил получение писем от их обработки и поставил очередь.
 
-## AI-assisted development
+Дальше:
 
-Five representative AI prompts plus what had to be corrected manually are documented in:
+`почта → очередь → обработчики → проверка → база данных → отчет`
 
-`docs/AI_PROCESS.md`
+Также понадобятся:
+- защита от повторной обработки одного письма;
+- повторные попытки при ошибках;
+- отдельное хранилище для неудачных писем;
+- база данных вместо таблицы как основное хранилище;
+- контроль лимитов и скорости;
+- мониторинг ошибок и стоимости.
 
-Key correction examples:
-- narrowed the original over-engineered architecture;
-- added missing edge cases to the dataset;
-- switched from n8n to existing GitHub + Vercel to remove setup overhead;
-- fixed a real Vercel dependency conflict without forcing unsafe npm flags;
-- kept holdout data untouched during tuning.
+Подробнее: `docs/COST_TIME_SCALE.md`.
 
-## Technical specification
+## Как использовал ИИ
 
-See `docs/TECH_SPEC.md`.
+Я использовал ChatGPT при разборе задания, подготовке тестовых данных, выборе архитектуры, поиске ошибки Vercel и анализе ошибок V1.
 
-## What was difficult / what I would do differently
+5 примеров запросов и то, что пришлось исправлять самому: `docs/AI_PROCESS.md`.
 
-See `docs/RETROSPECTIVE.md`.
+## Что было сложно и что сделал бы иначе
 
-Short version:
-1. correctness had to be defined before looking at output;
-2. V1 exposed context/negation failures;
-3. fixes were tied to observed failures only;
-4. V2 rose from 65% to 95% full-row accuracy;
-5. holdout stayed lower at 80%, showing the remaining generalization gap honestly;
-6. with more time I would add confidence scoring, AI fallback/manual review, and a measured manual-time study.
+Короткий разбор: `docs/RETROSPECTIVE.md`.
 
-## Deployment
+## Технологии
 
-The repository is connected to Vercel and deploys from `main`.
+- Next.js + TypeScript;
+- GitHub;
+- Vercel;
+- отдельный AI endpoint через Vercel AI Gateway оставлен как дополнительный вариант для экспериментов.
+
+Проект разворачивается из ветки `main` на Vercel.
