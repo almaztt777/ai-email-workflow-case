@@ -1,62 +1,63 @@
-# Cost, time and scale
+# Стоимость, экономия времени и 10 000 писем в день
 
-## Cost per run
+## 1. Сколько стоит один прогон
 
-The measured V1/V2 evaluation uses deterministic code, so the incremental model/API cost of the parser itself is:
+В текущей версии V1 и V2 разбор делает обычный код. Платный AI API при этих прогонах не вызывается.
 
-**$0 per email / $0 per 100 emails.**
+Поэтому дополнительная стоимость обработки:
 
-Vercel/GitHub are used within the existing project limits for this small technical case.
+- одно письмо — **$0**;
+- 100 писем — **$0**.
 
-The repository also contains an optional AI extraction endpoint through Vercel AI Gateway. I did not use unmeasured AI Gateway calls to fabricate cost numbers. In production I would log token usage and calculate cost from the actual model invoice.
+GitHub и Vercel используются в рамках уже имеющегося аккаунта и текущих лимитов.
 
-## Time saved on 100 emails
+В проекте есть дополнительный AI endpoint через Vercel AI Gateway, но я не стал придумывать стоимость для него без реальных вызовов. Если его использовать, стоимость нужно считать по фактическим токенам.
 
-For a transparent estimate I use a conservative manual-processing assumption:
+## 2. Сколько времени экономит на 100 письмах
 
-- open/read one short email;
-- identify name, phone, topic and urgency;
-- enter four fields in a table;
-- **~60 seconds per email** as a planning assumption.
+Точный замер вручную я не делал, поэтому здесь использую простое допущение.
 
-Therefore:
+Допустим, на одно короткое письмо вручную уходит около 1 минуты:
 
-- manual: 100 × 60 sec = **100 minutes**;
-- automated parser: computation is effectively seconds for this batch; the dominant time becomes ingestion/export rather than field extraction;
-- estimated saving: **about 95–100 minutes per 100 emails**.
+- открыть;
+- прочитать;
+- найти имя;
+- найти телефон;
+- понять тему;
+- определить срочность;
+- внести строку в таблицу.
 
-This is explicitly an estimate, not a claimed stopwatch measurement. With more time I would time a 10-email manual sample and replace the assumption with measured median handling time.
+Тогда 100 писем — примерно **100 минут ручной работы**.
 
-## What breaks at 10,000 emails/day
+Автоматический разбор такого объема занимает секунды. Даже если добавить несколько минут на загрузку и проверку, экономия будет примерно **95–100 минут на 100 писем**.
 
-The demo intentionally processes a small batch. At 10,000/day the first risks are not the parsing rules but the surrounding architecture:
+Это оценка. Если бы было больше времени, я бы вручную обработал 10 писем с секундомером и использовал реальное среднее время.
 
-1. ingestion rate limits and bursts;
-2. duplicate/retried messages;
-3. synchronous processing bottlenecks;
-4. spreadsheet write contention;
-5. lack of retry/dead-letter handling;
-6. insufficient observability;
-7. cost growth if every message is sent to an LLM.
+## 3. Что сломается при 10 000 писем в день
 
-## First production changes
+**Я не прогонял 10 000 писем. Это ответ на вопрос из задания, а не результат нагрузочного теста.**
 
-The first change would be to **decouple ingestion from processing**:
+При таком объеме проблемы будут уже не столько в правилах разбора, сколько вокруг них:
 
-email provider / webhook
-→ durable queue
-→ idempotent workers
-→ validation
-→ database
-→ reporting/export
+- письма могут приходить рывками;
+- один и тот же запрос может обработаться повторно;
+- синхронная обработка начнет упираться в скорость;
+- таблица станет плохим основным хранилищем;
+- нужны повторные попытки при временных ошибках;
+- нужно видеть, где и почему падает обработка;
+- если отправлять каждое письмо в LLM, начнет расти стоимость.
 
-Then I would add:
+## 4. Что я бы сделал первым
 
-- provider message ID as idempotency key;
-- bounded retries with exponential backoff;
-- dead-letter queue;
-- database as system of record instead of Google Sheets;
-- metrics for throughput, latency, errors and per-message cost;
-- deterministic parsing for easy fields and AI only for ambiguous semantic cases.
+Первое изменение — поставил бы очередь между получением письма и его обработкой:
 
-That keeps both reliability and AI cost under control.
+`почта → очередь → несколько обработчиков → проверка → база данных → отчет`
+
+После этого добавил бы:
+
+- ID письма, чтобы не обрабатывать его второй раз;
+- 2–3 повторные попытки при временной ошибке;
+- отдельную очередь для писем, которые так и не обработались;
+- базу данных вместо Google Sheets как основное хранилище;
+- мониторинг количества ошибок, скорости и стоимости;
+- обычный код для простых полей и AI только для действительно неоднозначных случаев.
