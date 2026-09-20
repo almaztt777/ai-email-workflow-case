@@ -1,67 +1,54 @@
-# Technical Specification
+# Техническое задание
 
-## 1. Objective
+## Цель
 
-Build a reproducible automation that converts inbound email text into a structured table row with:
+Сделать автоматизацию, которая получает текст письма и возвращает одну строку с четырьмя полями:
 
-- name
-- phone
-- topic
-- urgency
+- имя;
+- телефон;
+- тема;
+- срочность.
 
-The case must show not only the final result but the engineering process: baseline, failures, fixes and re-test.
+Кроме конечного результата нужно показать сам процесс: первая версия, ошибки, исправления и повторная проверка.
 
-## 2. Dataset
+## Данные
 
-- 40 synthetic emails: development/evaluation set
-- 10 synthetic emails: untouched holdout set
-- No real customer data is published
-- Ground truth is frozen before the first model run
+- 40 вымышленных писем — основной набор;
+- 10 вымышленных писем — отдельная контрольная проверка;
+- реальные данные клиентов не публикуются;
+- правильные ответы для проверки заданы заранее.
 
-## 3. Urgency rubric
+## Правила срочности
 
-- HIGH: today, tomorrow, within 24 hours, or explicitly urgent in the current request
-- MEDIUM: approximately 2-7 days
-- LOW: more than 7 days, no deadline, or explicitly not urgent
+- **HIGH** — нужно сегодня, завтра, в течение суток или явно написано «срочно»;
+- **MEDIUM** — срок примерно 2–7 дней;
+- **LOW** — больше 7 дней, срока нет или прямо написано «не срочно».
 
-## 4. Functional requirements
+## Что должна делать программа
 
-1. Accept email subject, body, id and received timestamp.
-2. Return one row per email.
-3. Never invent a missing name or phone.
-4. Normalize an unambiguous Kazakhstan phone to +7XXXXXXXXXX.
-5. Return only HIGH / MEDIUM / LOW urgency.
-6. Preserve multiple requested topics when necessary.
-7. Return a short urgency explanation.
-8. Expose token usage for cost measurement.
-9. Keep credentials outside GitHub.
+1. Получать тему и текст письма.
+2. Возвращать одну строку на одно письмо.
+3. Не придумывать имя или телефон, если их нет.
+4. Приводить казахстанский телефон к формату +7XXXXXXXXXX, если номер понятен.
+5. Выдавать только HIGH / MEDIUM / LOW для срочности.
+6. Если в письме две темы, не терять вторую.
+7. Не хранить пароли и ключи в GitHub.
 
-## 5. Evaluation
+## Как проверяю
 
-Metrics:
-- name accuracy
-- phone accuracy
-- urgency accuracy
-- topic keyword coverage
-- full-row accuracy
+1. Сначала фиксирую правильные ответы.
+2. Прогоняю V1 на письмах 01–40.
+3. Записываю все ошибки.
+4. Смотрю причины.
+5. Исправляю только найденные проблемы.
+6. Снова прогоняю те же 40 писем.
+7. После этого один раз проверяю V2 на письмах 41–50.
+8. Оставшиеся ошибки не скрываю.
 
-Protocol:
-1. Freeze ground truth.
-2. Run V1 on emails 01-40.
-3. Record every mismatch.
-4. Group failures by root cause.
-5. Change V2 only where observed failures justify it.
-6. Re-run the same 40.
-7. Run V2 once on emails 41-50.
-8. Report remaining limitations.
+Считаю отдельно точность имени, телефона, темы, срочности и процент полностью правильных строк.
 
-## 6. Production scaling to 10,000 emails/day
+## Если будет 10 000 писем в день
 
-The demo is intentionally small-scale. At production scale the first changes are:
-- decouple ingestion and processing
-- introduce a durable queue
-- idempotency by provider message id
-- bounded retries and dead-letter handling
-- database as system of record instead of a spreadsheet
-- rate-limit management
-- latency, cost and extraction-quality monitoring
+Эта версия рассчитана на маленький тестовый объем. При большом объеме нужно будет добавить очередь, защиту от дублей, повторные попытки, базу данных и мониторинг.
+
+Подробно это описано в `docs/COST_TIME_SCALE.md`.
