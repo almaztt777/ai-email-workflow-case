@@ -1,0 +1,11 @@
+id,name,phone,topic,urgency,urgency_reason
+"41","Айбек","+77000004141","тренажёр интубации","HIGH","Improved after V1 error analysis"
+"42","Меруерт","+77000004242","СЛР — подпись с чужим номером","MEDIUM","Improved after V1 error analysis"
+"43","Адиль","","тренажёр катетеризации","HIGH","Improved after V1 error analysis"
+"44","","+77000004444","симулятор аускультации лёгких, 2 комплекта","HIGH","Improved after V1 error analysis"
+"45","","+77000004545","тренажёр венепункции","HIGH","Improved after V1 error analysis"
+"46","Арсен","+77000004646","симулятор пациента","HIGH","Improved after V1 error analysis"
+"47","Амина","+77000004747","тренажёр внутривенных инъекций, срок ответа — до следующей недели","LOW","Improved after V1 error analysis"
+"48","Талгат","+77000004848","тренажёр ухода за стомой","MEDIUM","Improved after V1 error analysis"
+"49","Жансая","+77000004949","на тренажёр СЛР и на тренажёр интубации","HIGH","Improved after V1 error analysis"
+"50","Мурат","+77000005050","УЗИ-симулятор","HIGH","Improved after V1 error analysis"
