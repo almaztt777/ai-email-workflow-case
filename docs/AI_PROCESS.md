@@ -1,47 +1,57 @@
-# AI-assisted development process
+# Как я использовал ИИ
 
-The assignment explicitly requires visible AI usage and human correction. Below are representative prompts actually used during the work.
+Ниже 5 запросов, которые я использовал по ходу работы, и что пришлось исправлять самому.
 
-## Prompt 1 — clarify the assignment
+## 1. Разобраться, что вообще нужно сделать
 
-**Prompt:** Explain exactly what the evaluator expects: what the automation must do, what artifact must be submitted, and whether synthetic emails are acceptable.
+**Мой запрос:**
 
-**What AI helped with:** reduced the task to email → structured row, plus evidence of errors and iteration.
+> Объясни это задание простыми словами. Что именно должно работать и что я должен отдать в итоге?
 
-**What I corrected:** the first framing over-focused on infrastructure. I narrowed the scope to the four required fields and one reproducible artifact.
+**Что помог сделать ИИ:** разложил задание на простую схему: письмо → 4 поля → таблица → показать ошибки → исправить.
 
-## Prompt 2 — generate test data
+**Что я поправил:** сначала решение получалось слишком сложным. Я убрал лишнее и оставил только то, что реально нужно для кейса.
 
-**Prompt:** Create 50 realistic synthetic customer emails with varied names, phone formats, topics and urgency, including difficult edge cases.
+## 2. Сделать тестовые письма
 
-**What AI helped with:** generated varied safe test data instead of exposing real customer correspondence.
+**Мой запрос:**
 
-**What I corrected:** added explicit edge cases: missing name, missing phone, two phones, negated urgency, forwarded old text and two topics in one email.
+> Сделай 50 похожих на реальные рабочих писем. Нужны разные имена, телефоны, темы и срочность. Добавь сложные случаи.
 
-## Prompt 3 — architecture and technical specification
+**Что помог сделать ИИ:** быстро сделал тестовый набор без публикации реальной переписки.
 
-**Prompt:** Draft the technical specification, audit it, choose the current optimal platform, and minimize manual setup.
+**Что я поправил:** добавил специально сложные письма: без имени, без телефона, два телефона, «не срочно», пересланный старый текст, две темы в одном письме.
 
-**What AI helped with:** compared n8n, Apps Script, Vercel and direct code approaches.
+## 3. Выбрать, где это делать
 
-**What I corrected:** initially considered n8n Cloud, but that required a new account and extra setup. I moved the implementation to the already available GitHub + Vercel stack.
+**Мой запрос:**
 
-## Prompt 4 — debug deployment
+> Составь ТЗ, проверь его и выбери платформу. Хочу максимально мало ручной настройки.
 
-**Prompt:** The Vercel build fails with an npm dependency conflict. Diagnose the error and make the smallest safe fix.
+**Что помог сделать ИИ:** сравнил n8n, Apps Script, Vercel и обычный код.
 
-**What AI helped with:** identified the unused Zod dependency conflict with the OpenAI package.
+**Что я поменял:** сначала планировали n8n, но ради одного кейса пришлось бы заводить еще один сервис. Поэтому я выбрал уже подключенные GitHub + Vercel.
 
-**What I corrected:** removed only the unused dependency instead of forcing npm with legacy peer-deps.
+## 4. Исправить ошибку при публикации
 
-## Prompt 5 — error-driven iteration
+**Мой запрос:**
 
-**Prompt:** Compare V1 output with frozen ground truth, group real failures by root cause, then change only rules justified by those failures.
+> Vercel не собирается. Вот ошибка npm. Найди причину и исправь минимально.
 
-**What AI helped with:** categorized failures around urgency negation, relative deadlines, greeting/signature name formats and topic extraction.
+**Что помог сделать ИИ:** нашел конфликт зависимостей OpenAI и Zod.
 
-**What I corrected:** kept the 10-email holdout untouched and did not tune V2 against its remaining errors.
+**Что я поменял:** не стал обходить ошибку через принудительную установку пакетов. Убрал ненужную зависимость, после чего проект собрался.
 
-## Principle
+## 5. Разобрать ошибки V1
 
-AI was used as an engineering assistant, not as an unquestioned source of truth. Every important output was checked against a frozen dataset and the implementation was changed only when an observed failure justified it.
+**Мой запрос:**
+
+> Сравни результат первой версии с правильными ответами. Покажи, где и почему она ошибается. Исправляй только реальные ошибки.
+
+**Что помог сделать ИИ:** сгруппировал ошибки: отрицание «не срочно», сроки, имена в подписи и тема внутри текста письма.
+
+**Что я решил:** последние 10 писем не использовал для настройки V2. Они остались отдельной проверкой, чтобы увидеть, как исправления работают на новых примерах.
+
+## Итог
+
+ИИ ускорил работу, но я не принимал его ответы как готовую истину. Результат проверялся по заранее заданным правильным ответам, а изменения в V2 делались после реальных ошибок V1.
