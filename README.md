@@ -44,8 +44,8 @@ Synthetic email dataset → Next.js API → AI structured extraction → validat
 ## Status
 
 - [x] Repository scaffold
-- [ ] 50-message dataset
-- [ ] Ground truth
+- [x] 50-message dataset
+- [x] Ground truth
 - [x] Baseline extraction endpoint
 - [ ] Run V1 on 40 emails
 - [ ] Record real errors
