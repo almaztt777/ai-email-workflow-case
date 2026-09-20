@@ -3,39 +3,21 @@
 import { useMemo, useState } from "react";
 import emails from "../data/emails.json";
 import truth from "../data/ground-truth.json";
-import type { ExtractedRow } from "../lib/schema";
+import { parseV1, parseV2, normalizePhone, type EmailCase, type ParsedRow } from "../lib/parsers";
 
-type ApiResponse = {
-  rows: ExtractedRow[];
-  model: string;
-  usage: {
-    input_tokens?: number;
-    output_tokens?: number;
-    total_tokens?: number;
-  } | null;
-};
+const norm = (s: string | null | undefined) =>
+  (s ?? "").toLocaleLowerCase("ru-RU").replace(/ё/g, "е").trim();
 
-function norm(s: string | null | undefined) {
-  return (s ?? "").toLocaleLowerCase("ru-RU").replace(/ё/g, "е").trim();
-}
-
-function phoneNorm(s: string | null | undefined) {
-  if (!s) return "";
-  const d = s.replace(/\D/g, "");
-  if (d.length === 11 && d.startsWith("8")) return "7" + d.slice(1);
-  return d;
-}
-
-function scoreRows(rows: ExtractedRow[]) {
+function scoreRows(rows: ParsedRow[]) {
   let name = 0, phone = 0, urgency = 0, topic = 0, full = 0;
   for (const row of rows) {
     const gt = truth.find((x) => x.id === row.id);
     if (!gt) continue;
     const nameOk = norm(row.name) === norm(gt.name);
-    const phoneOk = phoneNorm(row.phone) === phoneNorm(gt.phone);
-    const urgencyOk = row.urgency === gt.urgency;
+    const phoneOk = normalizePhone(row.phone) === normalizePhone(gt.phone);
     const outputTopic = norm(row.topic);
     const topicOk = gt.topic_terms.every((term) => outputTopic.includes(norm(term)));
+    const urgencyOk = row.urgency === gt.urgency;
     name += Number(nameOk);
     phone += Number(phoneOk);
     urgency += Number(urgencyOk);
@@ -53,7 +35,7 @@ function scoreRows(rows: ExtractedRow[]) {
   };
 }
 
-function toCsv(rows: ExtractedRow[]) {
+function toCsv(rows: ParsedRow[]) {
   const esc = (v: unknown) => '"' + String(v ?? "").replace(/"/g, '""') + '"';
   return [
     ["id", "name", "phone", "topic", "urgency", "urgency_reason"].join(","),
@@ -62,52 +44,17 @@ function toCsv(rows: ExtractedRow[]) {
 }
 
 export default function WorkflowDemo() {
-  const [rows, setRows] = useState<ExtractedRow[]>([]);
-  const [running, setRunning] = useState(false);
-  const [model, setModel] = useState("");
-  const [usage, setUsage] = useState({ input: 0, output: 0, total: 0 });
-  const [error, setError] = useState("");
+  const [rows, setRows] = useState<ParsedRow[]>([]);
+  const [label, setLabel] = useState("");
 
   const metrics = useMemo(() => scoreRows(rows), [rows]);
 
-  async function run(split: "train" | "holdout") {
-    setRunning(true);
-    setRows([]);
-    setError("");
-    setUsage({ input: 0, output: 0, total: 0 });
-
-    try {
-      const selected = emails.filter((e) => e.split === split);
-      const all: ExtractedRow[] = [];
-      let input = 0, output = 0, total = 0;
-
-      for (let i = 0; i < selected.length; i += 10) {
-        const batch = selected.slice(i, i + 10).map(({ id, received_at, subject, body }) => ({
-          id, received_at, subject, body
-        }));
-
-        const response = await fetch("/api/extract", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ emails: batch }),
-        });
-
-        const data = (await response.json()) as ApiResponse & { error?: string };
-        if (!response.ok) throw new Error(data.error || "Extraction failed");
-
-        all.push(...data.rows);
-        setRows([...all]);
-        setModel(data.model);
-        input += data.usage?.input_tokens ?? 0;
-        output += data.usage?.output_tokens ?? 0;
-        total += data.usage?.total_tokens ?? 0;
-        setUsage({ input, output, total });
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-    } finally {
-      setRunning(false);
-    }
+  function run(mode: "v1" | "v2" | "holdout") {
+    const parser = mode === "v1" ? parseV1 : parseV2;
+    const split = mode === "holdout" ? "holdout" : "train";
+    const selected = (emails as EmailCase[]).filter((e) => e.split === split);
+    setRows(selected.map(parser));
+    setLabel(mode === "v1" ? "V1 on 40 development emails" : mode === "v2" ? "V2 on 40 development emails" : "V2 on untouched 10-email holdout");
   }
 
   function downloadCsv() {
@@ -131,26 +78,21 @@ export default function WorkflowDemo() {
     <div style={{ display: "grid", gap: 18 }}>
       <section style={card}>
         <h2 style={{ marginTop: 0 }}>1. Dataset</h2>
-        <p>40 development/evaluation emails + 10 holdout emails. All data is synthetic.</p>
+        <p>40 development/evaluation emails + 10 untouched holdout emails. All data is synthetic.</p>
         <p style={{ color: "#6b7280" }}>
-          Ground truth was frozen before the first model run. The holdout set is intentionally separated
-          so V2 can be checked on unseen edge cases.
+          Ground truth was frozen before V1. The holdout was not used to tune V2.
         </p>
       </section>
 
       <section style={card}>
-        <h2 style={{ marginTop: 0 }}>2. Run baseline V1</h2>
+        <h2 style={{ marginTop: 0 }}>2. Run the workflow</h2>
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-          <button disabled={running} onClick={() => run("train")} style={{ padding: "10px 16px", cursor: "pointer" }}>
-            {running ? "Running…" : "Run V1 on 40 emails"}
-          </button>
-          <button disabled={running} onClick={() => run("holdout")} style={{ padding: "10px 16px", cursor: "pointer" }}>
-            Run holdout 10
-          </button>
+          <button onClick={() => run("v1")} style={{ padding: "10px 16px", cursor: "pointer" }}>Run V1 — 40 emails</button>
+          <button onClick={() => run("v2")} style={{ padding: "10px 16px", cursor: "pointer" }}>Run V2 — 40 emails</button>
+          <button onClick={() => run("holdout")} style={{ padding: "10px 16px", cursor: "pointer" }}>Run holdout — 10 emails</button>
           {rows.length > 0 && <button onClick={downloadCsv} style={{ padding: "10px 16px", cursor: "pointer" }}>Download CSV</button>}
         </div>
-        {error && <p style={{ color: "#b91c1c", fontWeight: 700 }}>{error}</p>}
-        {model && <p style={{ color: "#6b7280" }}>Model: {model} · tokens: {usage.total} ({usage.input} in / {usage.output} out)</p>}
+        {label && <p style={{ color: "#4b5563", marginBottom: 0 }}>{label}</p>}
       </section>
 
       {rows.length > 0 && (
@@ -164,9 +106,9 @@ export default function WorkflowDemo() {
                 ["Topic", metrics.topic],
                 ["Urgency", metrics.urgency],
                 ["Full row", metrics.full],
-              ].map(([label, value]) => (
-                <div key={String(label)} style={{ background: "#f9fafb", padding: 16, borderRadius: 10 }}>
-                  <div style={{ color: "#6b7280", fontSize: 13 }}>{label}</div>
+              ].map(([metric, value]) => (
+                <div key={String(metric)} style={{ background: "#f9fafb", padding: 16, borderRadius: 10 }}>
+                  <div style={{ color: "#6b7280", fontSize: 13 }}>{metric}</div>
                   <div style={{ fontSize: 28, fontWeight: 800 }}>{value}%</div>
                 </div>
               ))}
