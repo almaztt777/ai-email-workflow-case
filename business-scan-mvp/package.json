@@ -1,0 +1,7 @@
+{
+  "name": "ai-business-scan-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {"dev":"vercel dev","start":"node local-server.js"},
+  "engines":{"node":">=20"}
+}
