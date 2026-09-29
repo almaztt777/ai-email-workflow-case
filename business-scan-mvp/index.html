@@ -1,0 +1,23 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Business Scan</title><style>
+:root{font-family:Inter,system-ui,Arial;color:#111827;background:#f6f7f9}*{box-sizing:border-box}body{margin:0}.wrap{max-width:1120px;margin:auto;padding:32px 18px 80px}.hero{display:flex;justify-content:space-between;gap:20px;align-items:end}h1{font-size:34px;margin:0 0 8px}.muted{color:#64748b}.card{background:#fff;border:1px solid #e5e7eb;border-radius:16px;padding:18px;margin:14px 0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{font-size:13px;font-weight:700;display:block;margin-bottom:6px}input,textarea{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font:inherit}textarea{min-height:86px}.btn{border:0;border-radius:10px;padding:12px 16px;font-weight:800;cursor:pointer;margin:12px 8px 0 0}.primary{background:#111827;color:#fff}.secondary{background:#e2e8f0}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#eef2ff;font-size:12px}.finding{border-left:4px solid #111827;padding-left:12px;margin:14px 0}.contour{display:grid;grid-template-columns:170px 1fr 170px;gap:12px;padding:10px 0;border-top:1px solid #eef2f7}.pre{white-space:pre-wrap;background:#0f172a;color:#e2e8f0;border-radius:12px;padding:14px;overflow:auto}.hidden{display:none}@media(max-width:760px){.grid{grid-template-columns:1fr}.contour{grid-template-columns:1fr}.hero{display:block}}
+</style></head><body><div class="wrap"><div class="hero"><div><h1>AI Business Scan</h1><div class="muted">360° pre-sale аудит: факты → денежные гипотезы → проверка → персональный заход.</div></div><span class="pill">MVP 0.1</span></div>
+<div class="card"><div class="grid"><div><label>Сайт компании</label><input id="url" value="https://rembrandlab.kz/"></div><div><label>Реклама</label><textarea id="ads" placeholder="Креативы, офферы, площадки, куда ведут..."></textarea></div><div><label>2GIS / Google / отзывы</label><textarea id="maps"></textarea></div><div><label>Instagram / соцсети</label><textarea id="social"></textarea></div><div style="grid-column:1/-1"><label>Mystery-shopping / переписка</label><textarea id="mystery"></textarea></div></div><button class="btn primary" onclick="scan()">Запустить аудит</button><button class="btn secondary" onclick="preset()">Тест Rembrand</button><div id="status" class="muted"></div></div>
+<div id="result" class="hidden"><div class="card"><h2>9 контуров</h2><div id="contours"></div></div><div class="card"><h2>Приоритет</h2><div id="findings"></div></div><div class="card"><h2>Первое сообщение</h2><div id="outreach" class="pre"></div></div><div class="card"><h2>AI-слой</h2><div id="ai" class="pre"></div></div><div class="card"><h2>Технические сигналы</h2><pre id="tech" class="pre"></pre></div></div>
+<script>
+function preset(){
+ ads.value='Подтверждалась публичная промо-активность в 2GIS. Актуальные Meta/Instagram Ads, Google Ads и Яндекс пока не подтверждены: нужно фиксировать только конкретные активные объявления, оффер → посадочная → CTA.';
+ maps.value='Сильная публичная репутация; продавать «репутацию с нуля» не приоритет. Ищем потери после входящего лида.';
+ social.value='Проверить текущие офферы, CTA, ссылку профиля и соответствие соцсети → посадочная → WhatsApp/CRM.';
+ mystery.value='Ещё не проведён. Нужны 3–5 сценариев: имплантация, ортодонтия, «подумаю», вечернее обращение, повторный вопрос; замерить SLA и follow-up.';
+}
+async function scan(){
+ status.textContent='Сканирую…'; result.classList.add('hidden');
+ try{
+  const r=await fetch('/api/scan',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({url:url.value,ads:ads.value,maps:maps.value,social:social.value,mystery:mystery.value})});
+  const j=await r.json(); if(!r.ok) throw new Error(j.error||'Ошибка');
+  contours.innerHTML=j.contours.map(x=>'<div class="contour"><b>'+x.name+'</b><div>'+x.observation+'</div><div class="muted">'+x.status+'</div></div>').join('');
+  findings.innerHTML=j.top.map(x=>'<div class="finding"><div><span class="pill">'+x.type+'</span> <b>'+x.score+'/100</b></div><h3>'+x.title+'</h3><div><b>Основание:</b> '+x.evidence+'</div><div><b>Почему важно:</b> '+x.impact+'</div><div><b>Следующий тест:</b> '+x.next+'</div></div>').join('');
+  outreach.textContent=j.outreach; ai.textContent=j.ai||'OPENAI_API_KEY не подключён. Базовый аудит работает без AI; после ключа появится второй слой анализа.'; tech.textContent=JSON.stringify(j.technical,null,2); result.classList.remove('hidden'); status.textContent='Готово: '+j.host;
+ }catch(e){status.textContent='Ошибка: '+e.message}
+}
+</script></div></body></html>
